@@ -2,7 +2,7 @@ import java.awt.*;
 import java.io.*;
 import java.util.*;  // For ArrayList, Queue, etc.
 import javax.swing.*;
-
+@SuppressWarnings("all")
 /**
  * MazeSolverGUI - A GUI application that creates random mazes or loads mazes from files
  * and finds the shortest path using BFS and A* algorithms.
@@ -17,7 +17,7 @@ public class MazeSolverGUI extends JFrame {
     private char openChar = 'O';
     private char startChar = 'S';
     private char exitChar = 'X';
-    private char pathChar = '+';
+    private final char pathChar = '+';
 
     // Colors for visualization.
     private static final Color BARRIER_COLOR = Color.BLACK;
@@ -345,26 +345,26 @@ public class MazeSolverGUI extends JFrame {
     private void placeRandomExit() {
         int side = generator.nextInt(4);
         switch (side) {
-            case 0:
+            case 0 -> {
                 // Top border.
                 exitRow = 0;
                 exitCol = 1 + generator.nextInt(cols - 2);
-                break;
-            case 1:
+            }
+            case 1 -> {
                 // Right border.
                 exitRow = 1 + generator.nextInt(rows - 2);
                 exitCol = cols - 1;
-                break;
-            case 2:
+            }
+            case 2 -> {
                 // Bottom border.
                 exitRow = rows - 1;
                 exitCol = 1 + generator.nextInt(cols - 2);
-                break;
-            case 3:
+            }
+            case 3 -> {
                 // Left border.
                 exitRow = 1 + generator.nextInt(rows - 2);
                 exitCol = 0;
-                break;
+            }
         }
         maze[exitRow][exitCol] = exitChar;
     }
@@ -391,22 +391,22 @@ public class MazeSolverGUI extends JFrame {
             int newExitCol = 0;
 
             switch (side) {
-                case 0:
+                case 0 -> {
                     newExitRow = 0;
                     newExitCol = 1 + generator.nextInt(cols - 2);
-                    break;
-                case 1:
+                }
+                case 1 -> {
                     newExitRow = 1 + generator.nextInt(rows - 2);
                     newExitCol = cols - 1;
-                    break;
-                case 2:
+                }
+                case 2 -> {
                     newExitRow = rows - 1;
                     newExitCol = 1 + generator.nextInt(cols - 2);
-                    break;
-                case 3:
+                }
+                case 3 -> {
                     newExitRow = 1 + generator.nextInt(rows - 2);
                     newExitCol = 0;
-                    break;
+                }
             }
 
             String position = newExitRow + "," + newExitCol;
@@ -427,22 +427,22 @@ public class MazeSolverGUI extends JFrame {
         if (!exitPlaced) {
             int side = generator.nextInt(4);
             switch (side) {
-                case 0:
+                case 0 -> {
                     exitRow = 0;
                     exitCol = 1 + generator.nextInt(cols - 2);
-                    break;
-                case 1:
+                }
+                case 1 -> {
                     exitRow = 1 + generator.nextInt(rows - 2);
                     exitCol = cols - 1;
-                    break;
-                case 2:
+                }
+                case 2 -> {
                     exitRow = rows - 1;
                     exitCol = 1 + generator.nextInt(cols - 2);
-                    break;
-                case 3:
+                }
+                case 3 -> {
                     exitRow = 1 + generator.nextInt(rows - 2);
                     exitCol = 0;
-                    break;
+                }
             }
             maze[exitRow][exitCol] = exitChar;
         }
@@ -1008,8 +1008,7 @@ public class MazeSolverGUI extends JFrame {
     public static void main(String[] args) {
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (ClassNotFoundException | IllegalAccessException | InstantiationException | UnsupportedLookAndFeelException e) {
         }
 
         SwingUtilities.invokeLater(() -> new MazeSolverGUI());
