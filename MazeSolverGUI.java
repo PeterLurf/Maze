@@ -1,63 +1,70 @@
 import java.awt.*;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.io.*;
 import java.util.*;  // For ArrayList, Queue, etc.
 import javax.swing.*;
+
 @SuppressWarnings("all")
 /**
- * MazeSolverGUI - A GUI application that creates random mazes or loads mazes from files
- * and finds the shortest path using BFS and A* algorithms.
+ * MazeSolverGUI - A GUI application that creates random mazes or loads mazes from files,
+ * finds the shortest path using BFS and A* algorithms, and now allows interactive play.
  * 
- * In this version, the default maze assignment letters (for barrier, open, start, exit, and path)
- * are stored in instance variables that may be set by the user (for example via a maze file).
- * All functions (maze creation, loading, and drawing) have been modified to use these instance variables.
+ * In this version, after pressing "Generate Random Maze" (or loading a maze),
+ * you can use the W, A, S, and D keys to move the red "start" character.
+ * When you reach the exit cell, you win!
  */
 public class MazeSolverGUI extends JFrame {
     // Instance variables for cell types with default values.
-    private char barrierChar = 'B';
-    private char openChar = 'O';
-    private char startChar = 'S';
-    private char exitChar = 'X';
-    private final char pathChar = '+';
+    public char barrierChar = 'B';
+    public char openChar = 'O';
+    public char startChar = 'S';
+    public char exitChar = 'X';
+    public final char pathChar = '+';
 
     // Colors for visualization.
-    private static final Color BARRIER_COLOR = Color.BLACK;
-    private static final Color OPEN_COLOR = Color.WHITE;
-    private static final Color EXIT_COLOR = Color.GREEN;
-    private static final Color START_COLOR = Color.RED;
-    private static final Color PATH_COLOR = Color.YELLOW;
+    public static final Color BARRIER_COLOR = Color.BLACK;
+    public static final Color OPEN_COLOR = Color.WHITE;
+    public static final Color EXIT_COLOR = Color.GREEN;
+    public static final Color START_COLOR = Color.RED;
+    public static final Color PATH_COLOR = Color.YELLOW;
 
     // UI Components.
-    private JPanel mazePanel;
-    private JPanel controlPanel;
-    private JButton loadFileButton;
-    private JButton generateMazeButton;
-    private JButton findPathBFSButton;
-    private JButton findPathAStarButton;
-    private JButton changeExitButton;
-    private JTextField rowsField;
-    private JTextField colsField;
-    private JCheckBox guaranteePathCheckbox;
-    private JLabel statusLabel;
+    public JPanel mazePanel;
+    public JPanel controlPanel;
+    public JButton loadFileButton;
+    public JButton generateMazeButton;
+    public JButton findPathBFSButton;
+    public JButton findPathAStarButton;
+    public JButton changeExitButton;
+    public JTextField rowsField;
+    public JTextField colsField;
+    public JCheckBox guaranteePathCheckbox;
+    public JLabel statusLabel;
 
     // Maze data.
-    private char[][] maze;
-    private int rows;
-    private int cols;
-    private int startRow;
-    private int startCol;
-    private int exitRow;
-    private int exitCol;
+    public char[][] maze;
+    public int rows;
+    public int cols;
+    public int startRow;
+    public int startCol;
+    public int exitRow;
+    public int exitCol;
     // To avoid repeating the same exit positions.
-    private final Set<String> previousExitPositions = new HashSet<>();
+    public final Set<String> previousExitPositions = new HashSet<>();
+
+    // For interactive movement: the current player position.
+    public int playerRow;
+    public int playerCol;
 
     // Random number generator.
-    private final Random generator = new Random();
+    public final Random generator = new Random();
 
     /**
      * Constructor - initializes the GUI components and sets up the layout.
      */
     public MazeSolverGUI() {
-        setTitle("Dynamic Maze Solver");
+        setTitle("Dynamic Maze Solver & Interactive Play");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
 
@@ -77,7 +84,7 @@ public class MazeSolverGUI extends JFrame {
     /**
      * Initializes all GUI components.
      */
-    private void initComponents() {
+    public void initComponents() {
         // Maze panel (will display the maze).
         mazePanel = new JPanel() {
             @Override
@@ -87,6 +94,13 @@ public class MazeSolverGUI extends JFrame {
             }
         };
         mazePanel.setBackground(Color.LIGHT_GRAY);
+        mazePanel.setFocusable(true);
+        mazePanel.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                handleKeyPress(e);
+            }
+        });
 
         // Control panel.
         controlPanel = new JPanel();
@@ -153,7 +167,7 @@ public class MazeSolverGUI extends JFrame {
         addLegendItem(legendPanel, PATH_COLOR, "Path (" + pathChar + ")");
 
         // Status label.
-        statusLabel = new JLabel("Welcome to Dynamic Maze Solver");
+        statusLabel = new JLabel("Welcome to Dynamic Maze Solver & Interactive Play");
         statusLabel.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
 
         // Add all panels to the control panel.
@@ -178,7 +192,7 @@ public class MazeSolverGUI extends JFrame {
      * @param color The color to display.
      * @param label The label text.
      */
-    private void addLegendItem(JPanel panel, Color color, String label) {
+    public void addLegendItem(JPanel panel, Color color, String label) {
         JPanel colorSquare = new JPanel();
         colorSquare.setBackground(color);
         colorSquare.setPreferredSize(new Dimension(20, 20));
@@ -193,7 +207,7 @@ public class MazeSolverGUI extends JFrame {
      *
      * @param g Graphics context to draw on.
      */
-    private void drawMaze(Graphics g) {
+    public void drawMaze(Graphics g) {
         if (maze == null) return;
 
         int width = mazePanel.getWidth();
@@ -246,7 +260,7 @@ public class MazeSolverGUI extends JFrame {
     /**
      * Action handler for the "Generate Random Maze" button.
      */
-    private void generateRandomMaze() {
+    public void generateRandomMaze() {
         try {
             // Parse dimensions from text fields.
             rows = Integer.parseInt(rowsField.getText().trim());
@@ -268,12 +282,18 @@ public class MazeSolverGUI extends JFrame {
             previousExitPositions.clear();
             previousExitPositions.add(exitRow + "," + exitCol);
 
-            statusLabel.setText("Random maze generated successfully");
+            // Set player's starting position for interactive movement.
+            playerRow = startRow;
+            playerCol = startCol;
+
+            // Enable interactive control by requesting focus.
+            mazePanel.requestFocusInWindow();
+
+            statusLabel.setText("Maze generated. Use W, A, S, D to move the red cell.");
             findPathBFSButton.setEnabled(true);
             findPathAStarButton.setEnabled(true);
             changeExitButton.setEnabled(true);
             mazePanel.repaint();
-
         } catch (NumberFormatException ex) {
             JOptionPane.showMessageDialog(this,
                     "Please enter valid numbers for rows and columns",
@@ -294,7 +314,7 @@ public class MazeSolverGUI extends JFrame {
      *
      * @param guaranteePath Whether to guarantee a valid path exists.
      */
-    private void createRandomMaze(boolean guaranteePath) {
+    public void createRandomMaze(boolean guaranteePath) {
         // Initialize maze with barriers using barrierChar.
         maze = new char[rows][cols];
         for (int i = 0; i < rows; i++) {
@@ -342,7 +362,7 @@ public class MazeSolverGUI extends JFrame {
     /**
      * Places the exit randomly on the border (not in corners).
      */
-    private void placeRandomExit() {
+    public void placeRandomExit() {
         int side = generator.nextInt(4);
         switch (side) {
             case 0 -> {
@@ -372,7 +392,7 @@ public class MazeSolverGUI extends JFrame {
     /**
      * Changes the exit location to a new random border position.
      */
-    private void changeExitLocation() {
+    public void changeExitLocation() {
         if (maze == null) return;
 
         // Remove the current exit.
@@ -454,7 +474,7 @@ public class MazeSolverGUI extends JFrame {
     /**
      * Places the start position randomly in an open cell.
      */
-    private void placeRandomStart() {
+    public void placeRandomStart() {
         ArrayList<int[]> openSpaces = new ArrayList<>();
         for (int i = 1; i < rows - 1; i++) {
             for (int j = 1; j < cols - 1; j++) {
@@ -480,7 +500,7 @@ public class MazeSolverGUI extends JFrame {
     /**
      * Generates random open spaces within the maze.
      */
-    private void generateRandomOpenSpaces() {
+    public void generateRandomOpenSpaces() {
         for (int i = 1; i < rows - 1; i++) {
             for (int j = 1; j < cols - 1; j++) {
                 if (generator.nextDouble() < 0.4) {
@@ -497,7 +517,7 @@ public class MazeSolverGUI extends JFrame {
      * This method picks a random interior starting cell (using odd indices),
      * marks it as open, then iteratively carves passages using a list of walls.
      */
-    private void generateMazeWithPrims() {
+    public void generateMazeWithPrims() {
         ArrayList<Cell> wallList = new ArrayList<>();
         int startX = randomOddCoordinate(cols);
         int startY = randomOddCoordinate(rows);
@@ -545,7 +565,7 @@ public class MazeSolverGUI extends JFrame {
      * @param max The dimension size (rows or columns).
      * @return An odd integer between 1 and max-2.
      */
-    private int randomOddCoordinate(int max) {
+    public int randomOddCoordinate(int max) {
         int available = (max - 2) / 2;
         return (generator.nextInt(available) * 2) + 1;
     }
@@ -557,7 +577,7 @@ public class MazeSolverGUI extends JFrame {
      * @param x The cell's column.
      * @param wallList The list to which to add wall cells.
      */
-    private void addWalls(int y, int x, ArrayList<Cell> wallList) {
+    public void addWalls(int y, int x, ArrayList<Cell> wallList) {
         // Up.
         if (y - 1 > 0 && maze[y - 1][x] == barrierChar) {
             wallList.add(new Cell(y - 1, x));
@@ -579,7 +599,7 @@ public class MazeSolverGUI extends JFrame {
     /**
      * Helper class to represent a cell in the maze.
      */
-    private class Cell {
+    public class Cell {
         int row, col;
         public Cell(int row, int col) {
             this.row = row;
@@ -592,7 +612,7 @@ public class MazeSolverGUI extends JFrame {
      *
      * @return true if a valid path exists; false otherwise.
      */
-    private boolean checkIfPathExists() {
+    public boolean checkIfPathExists() {
         if (maze == null) return false;
         boolean[][] visited = new boolean[rows][cols];
         Queue<int[]> queue = new LinkedList<>();
@@ -622,7 +642,7 @@ public class MazeSolverGUI extends JFrame {
      * Ensures that a path exists from start to exit.
      * If not, repeatedly swaps the exit location (via changeExitLocation) until a path is found or the maximum attempts are reached.
      */
-    private void ensureExitReachable() {
+    public void ensureExitReachable() {
         int attempts = 0;
         int maxAttempts = 100;
         while (!checkIfPathExists() && attempts < maxAttempts) {
@@ -637,7 +657,7 @@ public class MazeSolverGUI extends JFrame {
     /**
      * Action handler for the "Load Maze from File" button.
      */
-    private void loadMazeFromFile() {
+    public void loadMazeFromFile() {
         JFileChooser fileChooser = new JFileChooser();
         int result = fileChooser.showOpenDialog(this);
 
@@ -650,7 +670,12 @@ public class MazeSolverGUI extends JFrame {
                 previousExitPositions.clear();
                 previousExitPositions.add(exitRow + "," + exitCol);
 
-                statusLabel.setText("Maze loaded from " + selectedFile.getName());
+                // Set player's starting position for interactive movement.
+                playerRow = startRow;
+                playerCol = startCol;
+                mazePanel.requestFocusInWindow();
+
+                statusLabel.setText("Maze loaded from " + selectedFile.getName() + ". Use W, A, S, D to move.");
                 findPathBFSButton.setEnabled(true);
                 findPathAStarButton.setEnabled(true);
                 changeExitButton.setEnabled(true);
@@ -686,7 +711,7 @@ public class MazeSolverGUI extends JFrame {
      * @throws IOException If there's an error reading the file.
      * @throws IllegalArgumentException If the file format is invalid.
      */
-    private void loadMaze(File file) throws IOException, IllegalArgumentException {
+    public void loadMaze(File file) throws IOException, IllegalArgumentException {
         try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
             // Read number of rows.
             String line = reader.readLine();
@@ -793,7 +818,7 @@ public class MazeSolverGUI extends JFrame {
     /**
      * Clears any existing path in the maze by replacing path cells with open cells.
      */
-    private void clearPath() {
+    public void clearPath() {
         if (maze == null) return;
         for (int i = 0; i < rows; i++) {
             for (int j = 0; j < cols; j++) {
@@ -810,7 +835,7 @@ public class MazeSolverGUI extends JFrame {
      *
      * @return true if a path is found; false otherwise.
      */
-    private boolean findPathBFS() {
+    public boolean findPathBFS() {
         clearPath();
         if (maze == null) {
             statusLabel.setText("No maze loaded");
@@ -872,7 +897,7 @@ public class MazeSolverGUI extends JFrame {
      *
      * @param parent 3D array containing parent pointers for each cell.
      */
-    private void reconstructPath(int[][][] parent) {
+    public void reconstructPath(int[][][] parent) {
         int row = exitRow;
         int col = exitCol;
         while (true) {
@@ -893,7 +918,7 @@ public class MazeSolverGUI extends JFrame {
      *
      * @return true if a path is found; false otherwise.
      */
-    private boolean findPathAStar() {
+    public boolean findPathAStar() {
         clearPath();
         if (maze == null) {
             statusLabel.setText("No maze loaded");
@@ -955,14 +980,14 @@ public class MazeSolverGUI extends JFrame {
     /**
      * Returns the Manhattan distance between two points.
      */
-    private int manhattanDistance(int row1, int col1, int row2, int col2) {
+    public int manhattanDistance(int row1, int col1, int row2, int col2) {
         return Math.abs(row1 - row2) + Math.abs(col1 - col2);
     }
 
     /**
      * Node class for the A* algorithm.
      */
-    private class Node implements Comparable<Node> {
+    public class Node implements Comparable<Node> {
         int row, col, gCost, hCost, fCost;
         Node parent;
 
@@ -1001,6 +1026,68 @@ public class MazeSolverGUI extends JFrame {
     }
 
     /**
+     * Handles key presses for interactive movement.
+     * Allows movement using W (up), A (left), S (down), and D (right).
+     * When the player reaches the exit cell, a win is declared.
+     *
+     * @param e The key event.
+     */
+    public void handleKeyPress(KeyEvent e) {
+        if (maze == null) return; // No maze loaded.
+        int newRow = playerRow;
+        int newCol = playerCol;
+        char key = Character.toLowerCase(e.getKeyChar());
+
+        if (key == 'w') {
+            newRow--;
+        } else if (key == 'a') {
+            newCol--;
+        } else if (key == 's') {
+            newRow++;
+        } else if (key == 'd') {
+            newCol++;
+        } else {
+            return; // Ignore other keys.
+        }
+
+        // Check boundaries.
+        if (newRow < 0 || newRow >= rows || newCol < 0 || newCol >= cols) {
+            statusLabel.setText("Movement blocked: boundary reached.");
+            return;
+        }
+
+        // Check if moving into a barrier.
+        char targetCell = maze[newRow][newCol];
+        if (targetCell == barrierChar) {
+            statusLabel.setText("Movement blocked: barrier encountered.");
+            return;
+        }
+
+        // If the target cell is the exit, declare victory.
+        if (targetCell == exitChar) {
+            // Update player's position.
+            maze[playerRow][playerCol] = openChar;
+            playerRow = newRow;
+            playerCol = newCol;
+            maze[playerRow][playerCol] = startChar;
+            mazePanel.repaint();
+            statusLabel.setText("Congratulations! You've reached the exit!");
+            JOptionPane.showMessageDialog(this, "Congratulations! You've solved the maze!", "Victory", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        // Allow movement into open cells (or cells previously part of a path).
+        if (targetCell == openChar || targetCell == pathChar) {
+            maze[playerRow][playerCol] = openChar;
+            playerRow = newRow;
+            playerCol = newCol;
+            maze[playerRow][playerCol] = startChar;
+            mazePanel.repaint();
+            statusLabel.setText("Moved to (" + playerRow + ", " + playerCol + "). Use W, A, S, D to move.");
+        }
+    }
+
+    /**
      * Main method to start the application.
      *
      * @param args Command line arguments (not used).
@@ -1009,6 +1096,7 @@ public class MazeSolverGUI extends JFrame {
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         } catch (ClassNotFoundException | IllegalAccessException | InstantiationException | UnsupportedLookAndFeelException e) {
+            // If setting the look and feel fails, ignore and proceed.
         }
 
         SwingUtilities.invokeLater(() -> new MazeSolverGUI());
